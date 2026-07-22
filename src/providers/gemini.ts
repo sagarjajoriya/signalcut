@@ -5,7 +5,7 @@ import { SignalCutError } from "../utils/errors.js";
 const info: ProviderInfo = {
   id: "gemini",
   label: "Google Gemini",
-  defaultModel: "gemini-1.5-flash",
+  defaultModel: "gemini-2.0-flash",
   envVar: "GEMINI_API_KEY",
   keysUrl: "https://aistudio.google.com/app/apikey",
   implemented: true,
@@ -52,14 +52,14 @@ function translateGeminiError(error: unknown): SignalCutError {
       });
     }
     if (status === 429) {
-      return new SignalCutError("Gemini rate limit or quota exceeded (429).", {
-        hint: "Wait and retry, or check your plan's usage limits.",
+      return new SignalCutError(`Gemini rate limit or quota exceeded (429): ${error.message}`, {
+        hint: "Wait and retry, or check your plan's usage limits at https://aistudio.google.com.",
         cause: error,
       });
     }
     if (status === 404) {
-      return new SignalCutError("Gemini model not found (404).", {
-        hint: 'Set a valid model with "signalcut config model gemini <model>".',
+      return new SignalCutError(`Gemini model not found (404): ${error.message}`, {
+        hint: 'That model may be retired. Use a current id, e.g. "signalcut config model gemini gemini-2.0-flash" or "gemini-flash-latest".',
         cause: error,
       });
     }
