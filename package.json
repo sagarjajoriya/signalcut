@@ -28,7 +28,8 @@
     "dev": "tsup --watch",
     "start": "node dist/index.js",
     "typecheck": "tsc --noEmit",
-    "clean": "rm -rf dist",
+    "check": "tsup scripts/check-extract.ts --format esm --platform node --out-dir .sc-check --no-config && node .sc-check/check-extract.js && rm -rf .sc-check",
+    "clean": "rm -rf dist .sc-check",
     "prepublishOnly": "npm run clean && npm run build"
   },
   "dependencies": {
@@ -38,6 +39,7 @@
     "openai": "^4.56.0",
     "picocolors": "^1.0.1",
     "turndown": "^7.2.0",
+    "turndown-plugin-gfm": "^1.0.2",
     "zod": "^3.23.8"
   },
   "devDependencies": {

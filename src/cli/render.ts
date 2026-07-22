@@ -66,9 +66,19 @@ export function renderAnalysis(
     });
   }
 
+  if (analysis.performanceNotes.length > 0) {
+    section("Performance Notes");
+    for (const p of analysis.performanceNotes) lines.push(`- ${p}`);
+  }
+
   if (analysis.limitations.length > 0) {
     section("Limitations");
     for (const l of analysis.limitations) lines.push(`- ${l}`);
+  }
+
+  if (analysis.breakingChanges.length > 0) {
+    section("Breaking Changes");
+    for (const b of analysis.breakingChanges) lines.push(`- ${b}`);
   }
 
   if (analysis.errors.length > 0) {

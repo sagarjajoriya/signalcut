@@ -1,5 +1,6 @@
 node_modules/
 dist/
+.sc-check/
 *.log
 .DS_Store
 .env

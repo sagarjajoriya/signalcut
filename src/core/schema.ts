@@ -42,9 +42,17 @@ export const AnalysisSchema = z.object({
   limitations: z.array(z.string()).default([]),
   errors: z.array(ErrorSchema).default([]),
   dependencies: z.array(z.string()).default([]),
+  performanceNotes: z.array(z.string()).default([]),
+  breakingChanges: z.array(z.string()).default([]),
 });
 
 export type Analysis = z.infer<typeof AnalysisSchema>;
+
+/**
+ * Bumped whenever the schema or prompt changes in a way that alters output.
+ * Mixed into cache keys so stale results are never served after an upgrade.
+ */
+export const PIPELINE_VERSION = 2;
 
 /**
  * A compact, human-readable description of the required JSON shape, embedded in
@@ -72,5 +80,7 @@ export const ANALYSIS_JSON_SHAPE = `{
   "errors": [
     { "code": string, "meaning": string } // e.g. { "code": "401", "meaning": "Invalid API key" }
   ],
-  "dependencies": string[]               // required runtime/peer dependencies
+  "dependencies": string[],              // required runtime/peer dependencies
+  "performanceNotes": string[],          // concrete perf facts: limits, benchmarks, big-O, caching
+  "breakingChanges": string[]            // version-to-version breaking changes / migration notes
 }`;

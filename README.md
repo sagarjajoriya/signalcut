@@ -8,8 +8,10 @@ marketing copy and filler. SignalCut reads a page and returns only what a
 developer needs to actually use the thing: installation, auth, API surface,
 parameters, examples, limitations, and errors.
 
-> **Status:** Phase 1 (MVP core). CLI, encrypted key storage, the OpenAI
-> provider, and the `summarize` command are working. GitHub insights and
+> **Status:** Phase 2. On top of the Phase 1 core (CLI, encrypted key storage,
+> OpenAI provider, `summarize`), this adds higher-fidelity extraction
+> (code-fence languages, tables, boilerplate stripping), a response cache, and
+> richer output (performance notes, breaking changes). GitHub insights and
 > library comparison land in later phases (see [Roadmap](#roadmap)).
 
 ---
@@ -93,6 +95,8 @@ signalcut summarize https://docs.example.com
 | `signalcut config remove <id>` | Delete the stored key for a provider |
 | `signalcut config path` | Print the config directory |
 | `signalcut config reset` | Delete **all** local SignalCut data |
+| `signalcut cache status` | Show cache location, entry count, and size |
+| `signalcut cache clear` | Delete all cached analyses |
 | `signalcut version` / `--version` | Print the version |
 | `signalcut --help` | Full help |
 
@@ -104,7 +108,20 @@ signalcut summarize https://docs.example.com
 | `-m, --model <model>` | Override the configured model |
 | `--json` | Output raw JSON instead of the formatted report |
 | `--max-chars <n>` | Cap the characters of page content sent to the model |
+| `--no-cache` | Skip the cache for this run (do not read or write) |
+| `--refresh` | Ignore any cached result and overwrite it |
 | `--verbose` | Print debug diagnostics to stderr |
+
+### Caching
+
+Analysis results are cached locally so re-running `summarize` on an unchanged
+page is instant and free (no second LLM call). The cache key is derived from the
+URL, provider, model, pipeline version, and a hash of the extracted content —
+so if the page changes, or you switch model, the cache is bypassed
+automatically. Cached data lives in `~/.signalcut/cache/` and contains only the
+derived analysis of public pages — never your key. Use `--refresh` to force a
+re-analysis, `--no-cache` to skip it entirely, and `signalcut cache clear` to
+wipe it.
 
 ### Storing a key without a prompt (CI / scripts)
 
@@ -144,9 +161,15 @@ Creates a configured client instance.
   - timeout <number> (optional) — request timeout in ms
   Returns: Client instance
 
+Performance Notes
+- 100 requests/minute per key
+- Responses cached server-side for 60s
+
 Limitations
 - Max request size 5 MB
-- 100 requests/minute
+
+Breaking Changes
+- v2: `createClient` now requires `apiKey` (was optional in v1)
 
 Common Errors
 401: Invalid API key
@@ -172,8 +195,9 @@ src/
     resolve.ts          # picks provider + key + model (flag > config > env/default)
     privacy.ts          # one-time privacy notice
     commands/
-      summarize.ts      # summarize <url>
+      summarize.ts      # summarize <url> (with caching)
       config.ts         # config provider/set/key/list/model/remove/path/reset
+      cache.ts          # cache status/clear
       version.ts        # version
   providers/            # one LLMProvider interface, one file per backend
     types.ts
@@ -182,7 +206,7 @@ src/
     anthropic.ts        # stub (later phase)
     gemini.ts           # stub (later phase)
   core/
-    extractor.ts        # URL -> clean markdown (fetch + Readability + Turndown)
+    extractor.ts        # URL -> clean markdown (Readability + Turndown + GFM)
     prompt.ts           # strict, no-marketing extraction prompt
     schema.ts           # zod schema = single source of truth for output shape
     analyzer.ts         # markdown -> validated structured Analysis
@@ -190,6 +214,7 @@ src/
     paths.ts            # ~/.signalcut locations (override with SIGNALCUT_HOME)
     crypto.ts           # AES-256-GCM encrypt/decrypt + local master key
     credentials.ts      # encrypted key store + non-secret config
+    cache.ts            # content-addressed analysis cache (TTL)
   utils/
     errors.ts           # SignalCutError (clean, user-facing failures)
     logger.ts           # stderr diagnostics, stdout output
@@ -230,10 +255,15 @@ Everything lives under `~/.signalcut/` (override with `SIGNALCUT_HOME`):
 ```bash
 npm install          # install dependencies
 npm run typecheck    # tsc --noEmit (strict mode)
+npm run check        # run extraction + cache checks against fixtures (no network)
 npm run build        # bundle to dist/ with tsup
 npm run dev          # rebuild on change
 node dist/index.js --help
 ```
+
+`npm run check` exercises the HTML→markdown pipeline (code-fence languages,
+tables, boilerplate stripping) and the cache round-trip against in-memory
+fixtures — no network calls, no API key, no token spend.
 
 Run against a throwaway config directory so you never touch your real keys:
 
@@ -248,7 +278,9 @@ node dist/index.js summarize https://example.com
 
 - **Phase 1 — Core MVP (done):** CLI, encrypted config/key storage, OpenAI
   provider, `summarize`.
-- **Phase 2:** Better extraction, response caching, richer structured output.
+- **Phase 2 — Extraction & caching (done):** code-fence language preservation,
+  GFM tables, boilerplate stripping, response cache, and richer output
+  (performance notes, breaking changes).
 - **Phase 3:** GitHub integration — `signalcut github owner/repo` (README,
   releases, issues, breaking changes).
 - **Phase 4:** Comparison engine — `signalcut compare libA libB`.

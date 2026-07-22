@@ -17,6 +17,8 @@ Hard rules:
 - Preserve exact command syntax, code, parameter names, and error codes verbatim from the source.
 - Be terse. Descriptions are one line. No adjectives that don't carry information.
 - Do not include information that is not derivable from the provided text.
+- performanceNotes: include only concrete facts (limits, benchmarks, complexity, caching behavior), not vague claims like "fast" or "scalable".
+- breakingChanges: include only stated version-to-version breaks or migration steps; empty if none are mentioned.
 
 Return JSON matching exactly this shape (types shown, comments are for you only):
 ${ANALYSIS_JSON_SHAPE}`;
