@@ -8,12 +8,10 @@ marketing copy and filler. SignalCut reads a page and returns only what a
 developer needs to actually use the thing: installation, auth, API surface,
 parameters, examples, limitations, and errors.
 
-> **Status:** Phase 4. On top of the Phase 1–3 core (CLI, encrypted key storage,
-> OpenAI provider, `summarize`, high-fidelity extraction, response cache, GitHub
-> insights), this adds the **comparison engine** — `signalcut compare libA libB`
-> builds a fact-grounded comparison table from the npm registry and GitHub, with
-> the LLM filling only the qualitative rows. Packaging & more providers land in
-> Phase 5 (see [Roadmap](#roadmap)).
+> **Status:** Phase 5 — feature-complete MVP. All five phases are in: the CLI,
+> encrypted BYOK storage, high-fidelity extraction, response cache, GitHub
+> insights, the comparison engine, and **all three providers live** (OpenAI,
+> Anthropic, Google Gemini). The package is publish-ready.
 
 ---
 
@@ -43,7 +41,8 @@ the master key with the OS keychain through the same interface.
 ## Requirements
 
 - Node.js **18+**
-- An API key from a supported provider (Phase 1: **OpenAI**)
+- An API key from a supported provider: **OpenAI**, **Anthropic**, or
+  **Google Gemini**
 
 ## Install
 
@@ -65,7 +64,7 @@ npm link          # exposes the `signalcut` command globally
 ## Quick start
 
 ```bash
-# 1. Choose a provider
+# 1. Choose a provider (openai | anthropic | gemini)
 signalcut config provider openai
 
 # 2. Store your key (prompted securely; never shown, never logged)
@@ -74,6 +73,11 @@ signalcut config set openai
 # 3. Analyze a docs page
 signalcut summarize https://docs.example.com
 ```
+
+All three providers are interchangeable — swap with `config provider <id>`, or
+per-command with `--provider`. Set a specific model with
+`config model <id> <model>` (defaults: `gpt-4o-mini`, `claude-3-5-sonnet-latest`,
+`gemini-1.5-flash`).
 
 Prefer not to store a key? Set an environment variable instead — SignalCut falls
 back to it automatically:
@@ -261,9 +265,9 @@ src/
   providers/            # one LLMProvider interface, one file per backend
     types.ts
     registry.ts         # the single place that knows all providers
-    openai.ts           # implemented
-    anthropic.ts        # stub (later phase)
-    gemini.ts           # stub (later phase)
+    openai.ts           # implemented (chat completions, JSON mode)
+    anthropic.ts        # implemented (messages API, JSON via assistant prefill)
+    gemini.ts           # implemented (generateContent, JSON mime type)
   core/
     extractor.ts        # URL -> clean markdown (Readability + Turndown + GFM)
     prompt.ts           # strict, no-marketing extraction prompt
@@ -357,7 +361,20 @@ node dist/index.js summarize https://example.com
 - **Phase 4 — Comparison engine (done):** `signalcut compare libA libB` — a
   fact-grounded table from npm + GitHub, with the LLM filling only the
   qualitative rows.
-- **Phase 5:** Packaging & publishing; Anthropic and Gemini providers.
+- **Phase 5 — Providers & packaging (done):** Anthropic and Gemini providers
+  live; package metadata, changelog, and a clean publish tarball.
+
+## Publishing
+
+The package is publish-ready. `files` whitelists only `dist/`, `README.md`,
+`LICENSE`, and `CHANGELOG.md`; `prepack` rebuilds `dist/` and `prepublishOnly`
+runs typecheck + checks + build first.
+
+```bash
+npm run typecheck && npm run check   # gate
+npm pack --dry-run                   # inspect the tarball
+npm publish                          # publishes publicly (npm login required)
+```
 
 ## License
 

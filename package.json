@@ -11,6 +11,15 @@
     "api"
   ],
   "license": "MIT",
+  "author": "Sagar Jajoriya",
+  "homepage": "https://github.com/sagarjajoriya/signalcut#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sagarjajoriya/signalcut.git"
+  },
+  "bugs": {
+    "url": "https://github.com/sagarjajoriya/signalcut/issues"
+  },
   "type": "module",
   "bin": {
     "signalcut": "dist/index.js"
@@ -18,10 +27,14 @@
   "files": [
     "dist",
     "README.md",
-    "LICENSE"
+    "LICENSE",
+    "CHANGELOG.md"
   ],
   "engines": {
     "node": ">=18"
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "scripts": {
     "build": "tsup",
@@ -30,9 +43,12 @@
     "typecheck": "tsc --noEmit",
     "check": "tsup scripts/check-extract.ts --format esm --platform node --out-dir .sc-check --no-config && node .sc-check/check-extract.js && rm -rf .sc-check",
     "clean": "rm -rf dist .sc-check",
-    "prepublishOnly": "npm run clean && npm run build"
+    "prepack": "npm run build",
+    "prepublishOnly": "npm run clean && npm run typecheck && npm run check && npm run build"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.112.5",
+    "@google/genai": "^2.13.0",
     "@mozilla/readability": "^0.5.0",
     "commander": "^12.1.0",
     "jsdom": "^24.1.1",
