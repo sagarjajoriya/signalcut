@@ -8,11 +8,11 @@ marketing copy and filler. SignalCut reads a page and returns only what a
 developer needs to actually use the thing: installation, auth, API surface,
 parameters, examples, limitations, and errors.
 
-> **Status:** Phase 2. On top of the Phase 1 core (CLI, encrypted key storage,
-> OpenAI provider, `summarize`), this adds higher-fidelity extraction
-> (code-fence languages, tables, boilerplate stripping), a response cache, and
-> richer output (performance notes, breaking changes). GitHub insights and
-> library comparison land in later phases (see [Roadmap](#roadmap)).
+> **Status:** Phase 3. On top of the Phase 1–2 core (CLI, encrypted key storage,
+> OpenAI provider, `summarize`, high-fidelity extraction, response cache), this
+> adds **GitHub insights** — `signalcut github owner/repo` distills a
+> repository's README, releases, and most-discussed issues into structured
+> engineering facts. Library comparison lands next (see [Roadmap](#roadmap)).
 
 ---
 
@@ -87,12 +87,14 @@ signalcut summarize https://docs.example.com
 | Command | Description |
 | --- | --- |
 | `signalcut summarize <url>` | Extract structured engineering facts from a docs URL |
+| `signalcut github <owner/repo>` | Extract insights from a GitHub repo (README, releases, issues) |
 | `signalcut config provider <id>` | Set the active provider (`openai`, `anthropic`, `gemini`) |
 | `signalcut config set [id]` | Store an API key (securely prompted; defaults to active provider) |
 | `signalcut config key` | Store a key for the active provider |
 | `signalcut config list` | Show providers, active selection, masked key status, model |
 | `signalcut config model <id> <model>` | Set the model for a provider |
 | `signalcut config remove <id>` | Delete the stored key for a provider |
+| `signalcut config github-token` | Store a GitHub token to raise API rate limits (optional) |
 | `signalcut config path` | Print the config directory |
 | `signalcut config reset` | Delete **all** local SignalCut data |
 | `signalcut cache status` | Show cache location, entry count, and size |
@@ -122,6 +124,32 @@ automatically. Cached data lives in `~/.signalcut/cache/` and contains only the
 derived analysis of public pages — never your key. Use `--refresh` to force a
 re-analysis, `--no-cache` to skip it entirely, and `signalcut cache clear` to
 wipe it.
+
+## GitHub insights
+
+```bash
+signalcut github facebook/react
+signalcut github https://github.com/facebook/react   # URLs work too
+```
+
+`github` gathers a repository's public signals — metadata, README, the latest
+releases, and the most-discussed open issues — and distills them into a
+structured report: summary, maintenance status, installation, usage, breaking
+changes (from release notes), and common problems with workarounds (from
+issues, cited by issue number). The same `--provider`, `--model`, `--json`,
+`--no-cache`, and `--refresh` flags apply.
+
+The GitHub API works **unauthenticated** for public repos (60 requests/hour,
+plenty for occasional use). If you hit the rate limit, store a token — no scopes
+are needed for public repos — to raise it to 5,000/hour:
+
+```bash
+signalcut config github-token          # prompted securely; stored encrypted
+# or: export GITHUB_TOKEN=ghp_...
+```
+
+The token is optional, stored with the same AES-256-GCM encryption as your LLM
+keys, masked on display, and sent only to `api.github.com`.
 
 ### Storing a key without a prompt (CI / scripts)
 
@@ -194,8 +222,10 @@ src/
     render.ts           # Analysis -> formatted report
     resolve.ts          # picks provider + key + model (flag > config > env/default)
     privacy.ts          # one-time privacy notice
+    render-github.ts    # GithubInsights -> formatted report
     commands/
       summarize.ts      # summarize <url> (with caching)
+      github.ts         # github <owner/repo>
       config.ts         # config provider/set/key/list/model/remove/path/reset
       cache.ts          # cache status/clear
       version.ts        # version
@@ -210,12 +240,18 @@ src/
     prompt.ts           # strict, no-marketing extraction prompt
     schema.ts           # zod schema = single source of truth for output shape
     analyzer.ts         # markdown -> validated structured Analysis
+  github/
+    client.ts           # GitHub REST client (repo, readme, releases, issues)
+    schema.ts           # zod GithubInsights schema
+    prompt.ts           # repo corpus -> strict extraction prompt
+    insights.ts         # gather + analyze + cache orchestration
   storage/
     paths.ts            # ~/.signalcut locations (override with SIGNALCUT_HOME)
     crypto.ts           # AES-256-GCM encrypt/decrypt + local master key
-    credentials.ts      # encrypted key store + non-secret config
+    credentials.ts      # encrypted key store (+ GitHub token) + non-secret config
     cache.ts            # content-addressed analysis cache (TTL)
   utils/
+    json.ts             # tolerant JSON-object extraction from model output
     errors.ts           # SignalCutError (clean, user-facing failures)
     logger.ts           # stderr diagnostics, stdout output
     mask.ts             # secret masking
@@ -281,8 +317,9 @@ node dist/index.js summarize https://example.com
 - **Phase 2 — Extraction & caching (done):** code-fence language preservation,
   GFM tables, boilerplate stripping, response cache, and richer output
   (performance notes, breaking changes).
-- **Phase 3:** GitHub integration — `signalcut github owner/repo` (README,
-  releases, issues, breaking changes).
+- **Phase 3 — GitHub insights (done):** `signalcut github owner/repo` — README,
+  releases, most-discussed issues, breaking changes, common problems; optional
+  encrypted GitHub token.
 - **Phase 4:** Comparison engine — `signalcut compare libA libB`.
 - **Phase 5:** Packaging & publishing; Anthropic and Gemini providers.
 

@@ -15,6 +15,9 @@ import {
   hasKey,
   getStoredKey,
   resetAll,
+  setGithubToken,
+  getGithubToken,
+  deleteGithubToken,
 } from "../../storage/credentials.js";
 import { homeDir } from "../../storage/paths.js";
 import { maskSecret } from "../../utils/mask.js";
@@ -104,6 +107,29 @@ export function buildConfigCommand(): Command {
     });
 
   config
+    .command("github-token")
+    .description("Store a GitHub token to raise API rate limits (prompts securely)")
+    .option("--remove", "remove the stored GitHub token")
+    .action(async (opts: { remove?: boolean }) => {
+      if (opts.remove) {
+        logger.info(
+          deleteGithubToken()
+            ? "Removed stored GitHub token."
+            : "No GitHub token was stored.",
+        );
+        return;
+      }
+      showPrivacyNoticeOnce();
+      logger.info(
+        `Create a token at: ${pc.underline("https://github.com/settings/tokens")} (no scopes needed for public repos)`,
+      );
+      const token = await promptSecret("Paste your GitHub token: ");
+      if (!token) throw new SignalCutError("No token entered.");
+      setGithubToken(token);
+      logger.success(`Stored GitHub token (${maskSecret(token)}).`);
+    });
+
+  config
     .command("path")
     .description("Print the config directory location")
     .action(() => {
@@ -170,6 +196,14 @@ function printProviderList(): void {
   }
 
   logger.output("");
+  const token = getGithubToken();
+  const ghState = token
+    ? pc.green(`stored ${maskSecret(token)}`)
+    : process.env.GITHUB_TOKEN
+      ? pc.cyan("env GITHUB_TOKEN")
+      : pc.dim("not set (optional)");
+  logger.output(`${pc.dim("GitHub token:")} ${ghState}`);
+
   logger.output(
     active
       ? pc.dim(`Active provider: ${active}`)

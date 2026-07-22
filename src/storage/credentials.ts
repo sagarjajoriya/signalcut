@@ -24,8 +24,15 @@ export interface SignalCutConfig {
 
 const DEFAULT_CONFIG: SignalCutConfig = { providers: {} };
 
-/** Encrypted map of providerId -> apiKey. Stored only in ciphertext on disk. */
+/** Encrypted map of secretId -> value. Stored only in ciphertext on disk. */
 type CredentialMap = Record<string, string>;
+
+/**
+ * Namespaced key for non-provider secrets (e.g. a GitHub token) in the same
+ * encrypted map. The underscore prefix keeps them from ever colliding with a
+ * provider id.
+ */
+const GITHUB_TOKEN_ID = "_github_token";
 
 // ---------------------------------------------------------------------------
 // Config (non-secret)
@@ -130,6 +137,36 @@ export function deleteKey(providerId: string): boolean {
 
 export function hasKey(providerId: string): boolean {
   return Boolean(readCredentialMap()[providerId]);
+}
+
+// ---------------------------------------------------------------------------
+// GitHub token (optional, encrypted alongside provider keys)
+// ---------------------------------------------------------------------------
+
+export function setGithubToken(token: string): void {
+  const value = token.trim();
+  if (!value) {
+    throw new SignalCutError("Refusing to store an empty GitHub token.");
+  }
+  const map = readCredentialMap();
+  map[GITHUB_TOKEN_ID] = value;
+  writeCredentialMap(map);
+}
+
+export function getGithubToken(): string | undefined {
+  return readCredentialMap()[GITHUB_TOKEN_ID];
+}
+
+export function hasGithubToken(): boolean {
+  return Boolean(readCredentialMap()[GITHUB_TOKEN_ID]);
+}
+
+export function deleteGithubToken(): boolean {
+  const map = readCredentialMap();
+  if (!(GITHUB_TOKEN_ID in map)) return false;
+  delete map[GITHUB_TOKEN_ID];
+  writeCredentialMap(map);
+  return true;
 }
 
 // ---------------------------------------------------------------------------

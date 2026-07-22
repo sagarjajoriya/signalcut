@@ -15,6 +15,7 @@ const { htmlToCleanMarkdown } = await import("../src/core/extractor.js");
 const { buildCacheKey, hashContent, readCacheEntry, writeCacheEntry, clearCache } =
   await import("../src/storage/cache.js");
 const { maskSecret } = await import("../src/utils/mask.js");
+const { parseRepoRef } = await import("../src/github/client.js");
 
 const FIXTURE = `<!doctype html>
 <html>
@@ -90,5 +91,25 @@ assert.equal(readCacheEntry(key, 0), undefined, "zero TTL treats entry as expire
 assert.equal(readCacheEntry("does-not-exist"), undefined, "missing key is a miss");
 assert.equal(clearCache(), 1, "clearCache removes the entry");
 
+// GitHub repo-ref parsing (owner/repo and various URL forms).
+assert.deepEqual(parseRepoRef("facebook/react"), { owner: "facebook", repo: "react" });
+assert.deepEqual(parseRepoRef("https://github.com/facebook/react"), {
+  owner: "facebook",
+  repo: "react",
+});
+assert.deepEqual(parseRepoRef("https://github.com/facebook/react.git"), {
+  owner: "facebook",
+  repo: "react",
+});
+assert.deepEqual(parseRepoRef("git@github.com:facebook/react.git"), {
+  owner: "facebook",
+  repo: "react",
+});
+assert.deepEqual(parseRepoRef("https://github.com/facebook/react/issues/1"), {
+  owner: "facebook",
+  repo: "react",
+});
+assert.throws(() => parseRepoRef("not-a-repo"), /valid repository/);
+
 rmSync(TMP, { recursive: true, force: true });
-console.log("\nAll extraction + cache checks passed ✓");
+console.log("\nAll extraction + cache + github-parse checks passed ✓");
