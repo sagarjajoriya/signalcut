@@ -1,0 +1,50 @@
+{
+  "name": "signalcut",
+  "version": "0.1.0",
+  "description": "A CLI-first, BYOK developer tool that extracts noise-free technical documentation, API references, and GitHub insights.",
+  "keywords": [
+    "cli",
+    "documentation",
+    "developer-tools",
+    "llm",
+    "byok",
+    "api"
+  ],
+  "license": "MIT",
+  "type": "module",
+  "bin": {
+    "signalcut": "dist/index.js"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "start": "node dist/index.js",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist",
+    "prepublishOnly": "npm run clean && npm run build"
+  },
+  "dependencies": {
+    "@mozilla/readability": "^0.5.0",
+    "commander": "^12.1.0",
+    "jsdom": "^24.1.1",
+    "openai": "^4.56.0",
+    "picocolors": "^1.0.1",
+    "turndown": "^7.2.0",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/jsdom": "^21.1.7",
+    "@types/node": "^20.14.15",
+    "@types/turndown": "^5.0.5",
+    "tsup": "^8.2.4",
+    "typescript": "^5.5.4"
+  }
+}
