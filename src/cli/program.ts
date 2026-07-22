@@ -4,6 +4,7 @@ import { setVerbose } from "../utils/logger.js";
 import { buildConfigCommand } from "./commands/config.js";
 import { buildSummarizeCommand } from "./commands/summarize.js";
 import { buildGithubCommand } from "./commands/github.js";
+import { buildCompareCommand } from "./commands/compare.js";
 import { buildCacheCommand } from "./commands/cache.js";
 import { buildVersionCommand } from "./commands/version.js";
 
@@ -29,6 +30,7 @@ export function buildProgram(): Command {
   program.addCommand(buildConfigCommand());
   program.addCommand(buildSummarizeCommand());
   program.addCommand(buildGithubCommand());
+  program.addCommand(buildCompareCommand());
   program.addCommand(buildCacheCommand());
   program.addCommand(buildVersionCommand());
 
@@ -40,6 +42,7 @@ Examples:
   $ signalcut config set openai
   $ signalcut summarize https://docs.example.com
   $ signalcut github facebook/react
+  $ signalcut compare express fastify
   $ signalcut config list
 
 Privacy: your API key stays on this machine, encrypted at rest, and is sent

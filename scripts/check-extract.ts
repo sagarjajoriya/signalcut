@@ -16,6 +16,7 @@ const { buildCacheKey, hashContent, readCacheEntry, writeCacheEntry, clearCache 
   await import("../src/storage/cache.js");
 const { maskSecret } = await import("../src/utils/mask.js");
 const { parseRepoRef } = await import("../src/github/client.js");
+const { renderComparison } = await import("../src/cli/render-compare.js");
 
 const FIXTURE = `<!doctype html>
 <html>
@@ -111,5 +112,50 @@ assert.deepEqual(parseRepoRef("https://github.com/facebook/react/issues/1"), {
 });
 assert.throws(() => parseRepoRef("not-a-repo"), /valid repository/);
 
+// Comparison renderer: factual rows + qualitative sections, formatted safely.
+const compareOut = renderComparison({
+  a: {
+    input: "express",
+    name: "express",
+    source: "npm",
+    language: "JavaScript",
+    version: "4.19.2",
+    license: "MIT",
+    dependencies: 31,
+    installSize: 220_000,
+    weeklyDownloads: 30_000_000,
+    stars: 64_000,
+    openIssues: 180,
+    lastActivity: "2024-03-25T00:00:00Z",
+    maintenance: "active",
+  },
+  b: {
+    input: "fastify",
+    name: "fastify",
+    source: "npm",
+    language: "JavaScript",
+    version: "4.26.0",
+    license: "MIT",
+    dependencies: 20,
+    installSize: 900_000,
+    weeklyDownloads: 2_000_000,
+    stars: 31_000,
+    openIssues: 90,
+    lastActivity: "2024-02-01T00:00:00Z",
+    maintenance: "active",
+  },
+  comparison: {
+    performance: { a: "Middleware chain", b: "Schema-based, faster routing" },
+    limitations: { a: ["No built-in schema validation"], b: ["Steeper learning curve"] },
+    bestFor: { a: "Simple APIs", b: "High-throughput services" },
+    summary: "Pick express for simplicity, fastify for throughput.",
+  },
+});
+assert.ok(/express/.test(compareOut) && /fastify/.test(compareOut), "both names shown");
+assert.ok(/214\.8 KB/.test(compareOut), "install size formatted (binary KB)");
+assert.ok(/30\.0M/.test(compareOut), "downloads compacted");
+assert.ok(/Middleware chain/.test(compareOut), "performance rendered");
+assert.ok(/Pick express/.test(compareOut), "summary rendered");
+
 rmSync(TMP, { recursive: true, force: true });
-console.log("\nAll extraction + cache + github-parse checks passed ✓");
+console.log("\nAll extraction + cache + github-parse + compare-render checks passed ✓");

@@ -8,11 +8,12 @@ marketing copy and filler. SignalCut reads a page and returns only what a
 developer needs to actually use the thing: installation, auth, API surface,
 parameters, examples, limitations, and errors.
 
-> **Status:** Phase 3. On top of the Phase 1–2 core (CLI, encrypted key storage,
-> OpenAI provider, `summarize`, high-fidelity extraction, response cache), this
-> adds **GitHub insights** — `signalcut github owner/repo` distills a
-> repository's README, releases, and most-discussed issues into structured
-> engineering facts. Library comparison lands next (see [Roadmap](#roadmap)).
+> **Status:** Phase 4. On top of the Phase 1–3 core (CLI, encrypted key storage,
+> OpenAI provider, `summarize`, high-fidelity extraction, response cache, GitHub
+> insights), this adds the **comparison engine** — `signalcut compare libA libB`
+> builds a fact-grounded comparison table from the npm registry and GitHub, with
+> the LLM filling only the qualitative rows. Packaging & more providers land in
+> Phase 5 (see [Roadmap](#roadmap)).
 
 ---
 
@@ -88,6 +89,7 @@ signalcut summarize https://docs.example.com
 | --- | --- |
 | `signalcut summarize <url>` | Extract structured engineering facts from a docs URL |
 | `signalcut github <owner/repo>` | Extract insights from a GitHub repo (README, releases, issues) |
+| `signalcut compare <libA> <libB>` | Compare two libraries across engineering dimensions |
 | `signalcut config provider <id>` | Set the active provider (`openai`, `anthropic`, `gemini`) |
 | `signalcut config set [id]` | Store an API key (securely prompted; defaults to active provider) |
 | `signalcut config key` | Store a key for the active provider |
@@ -150,6 +152,31 @@ signalcut config github-token          # prompted securely; stored encrypted
 
 The token is optional, stored with the same AES-256-GCM encryption as your LLM
 keys, masked on display, and sent only to `api.github.com`.
+
+## Comparing libraries
+
+```bash
+signalcut compare express fastify           # two npm packages
+signalcut compare zod yup
+signalcut compare vuejs/core facebook/react # or GitHub repos
+```
+
+`compare` is deliberately **fact-grounded** to avoid hallucination. Each library
+is resolved and gathered from real sources:
+
+- **npm registry** — latest version, license, dependency count, unpacked install
+  size, last publish date, and the declared GitHub repository.
+- **npm downloads API** — weekly download count.
+- **GitHub** — language, stars, open issues, last push, archived flag.
+
+Those become the **factual rows of the table directly** — the model never
+touches them, so versions, sizes, and counts can't be invented. The LLM is asked
+only for the dimensions that aren't in registry data: **performance
+characteristics, limitations, "best for", and a bottom-line recommendation**.
+Maintenance status is derived deterministically from the last-activity date and
+archived flag. Accepts npm names, scoped packages (`@scope/name`), `owner/repo`,
+or GitHub URLs, and supports the same `--json`, `--no-cache`, and `--refresh`
+flags.
 
 ### Storing a key without a prompt (CI / scripts)
 
@@ -223,9 +250,11 @@ src/
     resolve.ts          # picks provider + key + model (flag > config > env/default)
     privacy.ts          # one-time privacy notice
     render-github.ts    # GithubInsights -> formatted report
+    render-compare.ts   # CompareResult -> comparison table
     commands/
       summarize.ts      # summarize <url> (with caching)
       github.ts         # github <owner/repo>
+      compare.ts        # compare <libA> <libB>
       config.ts         # config provider/set/key/list/model/remove/path/reset
       cache.ts          # cache status/clear
       version.ts        # version
@@ -240,11 +269,16 @@ src/
     prompt.ts           # strict, no-marketing extraction prompt
     schema.ts           # zod schema = single source of truth for output shape
     analyzer.ts         # markdown -> validated structured Analysis
+    comparator.ts       # resolve + gather + deterministic rows + LLM + cache
+    compare-schema.ts   # zod Comparison schema (qualitative rows only)
+    compare-prompt.ts   # factual data packs -> strict compare prompt
   github/
     client.ts           # GitHub REST client (repo, readme, releases, issues)
     schema.ts           # zod GithubInsights schema
     prompt.ts           # repo corpus -> strict extraction prompt
     insights.ts         # gather + analyze + cache orchestration
+  npm/
+    client.ts           # npm registry metadata + weekly downloads + repo resolve
   storage/
     paths.ts            # ~/.signalcut locations (override with SIGNALCUT_HOME)
     crypto.ts           # AES-256-GCM encrypt/decrypt + local master key
@@ -320,7 +354,9 @@ node dist/index.js summarize https://example.com
 - **Phase 3 — GitHub insights (done):** `signalcut github owner/repo` — README,
   releases, most-discussed issues, breaking changes, common problems; optional
   encrypted GitHub token.
-- **Phase 4:** Comparison engine — `signalcut compare libA libB`.
+- **Phase 4 — Comparison engine (done):** `signalcut compare libA libB` — a
+  fact-grounded table from npm + GitHub, with the LLM filling only the
+  qualitative rows.
 - **Phase 5:** Packaging & publishing; Anthropic and Gemini providers.
 
 ## License
